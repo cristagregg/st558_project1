@@ -1,0 +1,41 @@
+---
+title: "Vignette"
+author: "Crista Gregg"
+date: "6/10/2021"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(httr)
+library(jsonlite)
+library(tidyverse)
+```
+
+## Functions to access API's
+```{r franchise function}
+get_franchise <- function(id_num = NA, full_name = NA){
+  #connect to API
+  get_endpoint <- GET('https://records.nhl.com/site/api/franchise') %>%
+    content("text", encoding = 'UTF-8') %>%
+    fromJSON(flatten = T) 
+  df1 <- get_endpoint$data
+  
+  #if else statement to get team by name or ID
+  ifelse(is.na(id_num) & is.na(full_name), franchise <- df1, 
+         ifelse(is.na(id_num) & is.na(full_name) == FALSE, franchise <- filter(df1, fullName == full_name),
+                ifelse(is.na(id_num) == FALSE & is.na(full_name), franchise <- filter(df1, id == id_num), 
+                       franchise <- filter(df1, id == id_num | fullName == full_name)                                                         ))                                                         )
+  return(franchise)
+}
+
+get_franchise(3, full_name = 'Montreal Wanderers')
+```
+
+
+
