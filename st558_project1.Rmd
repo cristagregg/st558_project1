@@ -37,5 +37,65 @@ get_franchise <- function(id_num = NA, full_name = NA){
 get_franchise(3, full_name = 'Montreal Wanderers')
 ```
 
+```{r franchise team totals function}
 
+get_franchise_team_totals <- function(id_num = NA, team_name = NA){
+  #connect to API
+  get_endpoint <- GET('https://records.nhl.com/site/api/franchise-team-totals') %>%
+    content("text", encoding = 'UTF-8') %>%
+    fromJSON(flatten = T) 
+   df1 <- get_endpoint$data
+  
+  #if else statement to get team by name or ID
+  ifelse(is.na(id_num) & is.na(team_name), franchise_team_totals <- df1, 
+         ifelse(is.na(id_num) & is.na(team_name) == FALSE, franchise_team_totals <- filter(df1, teamName == team_name),
+                ifelse(is.na(id_num) == FALSE & is.na(team_name), franchise_team_totals <- filter(df1, teamID == id_num), 
+                       franchise_team_totals <- filter(df1, teamId == id_num | teamName == team_name)                                                         ))                                                         )
+  return(franchise_team_totals)
+}
 
+get_franchise_team_totals(5, team_name = 'New York Islanders')
+```
+
+```{r records function}
+#function to call from franchise season records, goalie records, or skater records.
+get_franchise_records <- function(record_type , id_num = NA, franchise_name = NA){
+  
+  #stop running if incorrect type of record entered
+  if (!record_type %in% c('season', 'goalie', 'skater')){
+    stop("Please enter record type of 'season', 'goalie', or 'skater'")
+  }
+  
+  #connect to API
+  URL <- paste0('https://records.nhl.com/site/api/franchise-', record_type, '-records')
+  get_endpoint <- GET(URL) %>%
+    content("text", encoding = 'UTF-8') %>%
+    fromJSON(flatten = T) 
+   df1 <- get_endpoint$data
+  
+  #if else statement to get team by name or ID
+  ifelse(is.na(id_num) & is.na(franchise_name), franchise_records <- df1, 
+         ifelse(is.na(id_num) & is.na(franchise_name) == FALSE, franchise_records <- filter(df1, franchiseName == franchise_name),
+                ifelse(is.na(id_num) == FALSE & is.na(franchise_name), franchise_records <- filter(df1, franchiseId == id_num), 
+                       franchise_records <- filter(df1, franchiseId == id_num | franchiseName == franchise_name)                                                         ))                                                         )
+  return(franchise_records)
+}
+
+get_franchise_records(record_type = 'skater', id_num = 2)
+```
+
+```{r franchise detail function}
+get_franchise_detail <- function(id_num = NA){
+  #connect to API
+  get_endpoint <- GET('https://records.nhl.com/site/api/franchise-detail') %>%
+    content("text", encoding = 'UTF-8') %>%
+    fromJSON(flatten = T) 
+   df1 <- get_endpoint$data
+  
+  #if else statement to get team by name or ID
+  ifelse(is.na(id_num), franchise_detail <- df1, franchise_detail <- filter(df1, id == id_num))                                                                                                        
+  return(franchise_detail)
+}
+
+get_franchise_detail(4)
+```
