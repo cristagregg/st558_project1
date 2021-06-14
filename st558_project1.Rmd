@@ -99,3 +99,51 @@ get_franchise_detail <- function(id_num = NA){
 
 get_franchise_detail(4)
 ```
+
+```{r get stats}
+get_team_stats <- function(id = 'All'){
+
+if (id == 'All'){
+#teams info to show where individual team info is located
+get_endpoint_all <- GET('https://statsapi.web.nhl.com/api/v1/teams/') %>%
+    content("text", encoding = 'UTF-8') %>%
+    fromJSON(flatten = T) 
+
+
+#get all team info
+team_stats_combined_games <- {}
+team_stats_combined_wins <- {}
+
+#use URL pulled from get_endpoint_all to grab data from all teams and then combine
+URL_combine <- paste0('https://statsapi.web.nhl.com/api/v1/teams/', as.character(get_endpoint_all$teams$id), '/stats', '?expand=team.stats')
+  for (i in 1:length(URL_combine)){
+    team_stat <- GET(URL_combine[i]) %>%
+      content("text", encoding = 'UTF-8') %>%
+      fromJSON(flatten = T) 
+   team_stats_combined_games <- rbind(team_stats_combined_games, team_stat$stats$splits[[1]])
+   team_stats_combined_wins <- rbind(team_stats_combined_wins, team_stat$stats$splits[[2]])
+  }
+team_stats_combined_games <- select(team_stats_combined_games, team.id, team.name, everything())
+team_stats_combined_wins <- select(team_stats_combined_wins, team.id, team.name, everything())
+
+return(full_join(team_stats_combined_games, team_stats_combined_wins, by = 'team.id'))
+
+} else {
+#if specific team wanted
+  URL <- paste0('https://statsapi.web.nhl.com/api/v1/teams/', as.character(id), '/stats', '?expand=team.stats')
+  get_endpoint <- GET(URL) %>%
+      content("text", encoding = 'UTF-8') %>%
+      fromJSON(flatten = T) 
+  games <- get_endpoint$stats$splits[[1]] %>% 
+    select(team.id, team.name, everything())
+  wins <- get_endpoint$stats$splits[[2]] %>% 
+    select(team.id, team.name, everything())
+  return(full_join(games, wins, by = 'team.id'))
+}
+}
+
+#get_team_stats()
+get_team_stats(2)
+```
+
+
