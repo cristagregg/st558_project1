@@ -19,7 +19,7 @@ library(tidyverse)
 
 ## Functions to access API's
 ```{r franchise function}
-get_franchise <- function(id_num = NA, full_name = NA){
+get_franchise <- function(team_id = NA, team_name = NA){
   #connect to API
   get_endpoint <- GET('https://records.nhl.com/site/api/franchise') %>%
     content("text", encoding = 'UTF-8') %>%
@@ -27,19 +27,19 @@ get_franchise <- function(id_num = NA, full_name = NA){
   df1 <- get_endpoint$data
   
   #if else statement to get team by name or ID
-  ifelse(is.na(id_num) & is.na(full_name), franchise <- df1, 
-         ifelse(is.na(id_num) & is.na(full_name) == FALSE, franchise <- filter(df1, fullName == full_name),
-                ifelse(is.na(id_num) == FALSE & is.na(full_name), franchise <- filter(df1, id == id_num), 
-                       franchise <- filter(df1, id == id_num | fullName == full_name)                                                         ))                                                         )
+  ifelse(is.na(team_id) & is.na(team_name), franchise <- df1, 
+         ifelse(is.na(team_id) & is.na(team_name) == FALSE, franchise <- filter(df1, fullName == team_name),
+                ifelse(is.na(team_id) == FALSE & is.na(team_name), franchise <- filter(df1, id == team_id), 
+                       franchise <- filter(df1, id == team_id | fullName == team_name)                                                         ))                                                         )
   return(franchise)
 }
 
-get_franchise(3, full_name = 'Montreal Wanderers')
+get_franchise(3, team_name = 'Montreal Wanderers')
 ```
 
 ```{r franchise team totals function}
 
-get_franchise_team_totals <- function(id_num = NA, team_name = NA){
+get_franchise_team_totals <- function(team_id = NA, team_name = NA){
   #connect to API
   get_endpoint <- GET('https://records.nhl.com/site/api/franchise-team-totals') %>%
     content("text", encoding = 'UTF-8') %>%
@@ -47,19 +47,19 @@ get_franchise_team_totals <- function(id_num = NA, team_name = NA){
    df1 <- get_endpoint$data
   
   #if else statement to get team by name or ID
-  ifelse(is.na(id_num) & is.na(team_name), franchise_team_totals <- df1, 
-         ifelse(is.na(id_num) & is.na(team_name) == FALSE, franchise_team_totals <- filter(df1, teamName == team_name),
-                ifelse(is.na(id_num) == FALSE & is.na(team_name), franchise_team_totals <- filter(df1, teamID == id_num), 
-                       franchise_team_totals <- filter(df1, teamId == id_num | teamName == team_name)                                                         ))                                                         )
+  ifelse(is.na(team_id) & is.na(team_name), franchise_team_totals <- df1, 
+         ifelse(is.na(team_id) & is.na(team_name) == FALSE, franchise_team_totals <- filter(df1, teamName == team_name),
+                ifelse(is.na(team_id) == FALSE & is.na(team_name), franchise_team_totals <- filter(df1, teamId == team_id), 
+                       franchise_team_totals <- filter(df1, teamId == team_id | teamName == team_name)                                                         ))                                                         )
   return(franchise_team_totals)
 }
 
-get_franchise_team_totals(5, team_name = 'New York Islanders')
+get_franchise_team_totals(2)
 ```
 
 ```{r records function}
 #function to call from franchise season records, goalie records, or skater records.
-get_franchise_records <- function(record_type , id_num = NA, franchise_name = NA){
+get_franchise_records <- function(record_type , team_id = NA, team_name = NA){
   
   #stop running if incorrect type of record entered
   if (!record_type %in% c('season', 'goalie', 'skater')){
@@ -68,42 +68,45 @@ get_franchise_records <- function(record_type , id_num = NA, franchise_name = NA
   
   #connect to API
   URL <- paste0('https://records.nhl.com/site/api/franchise-', record_type, '-records')
-  get_endpoint <- GET(URL) %>%
+  endpoint <- GET(URL) %>%
     content("text", encoding = 'UTF-8') %>%
     fromJSON(flatten = T) 
-   df1 <- get_endpoint$data
+   df1 <- endpoint$data
   
   #if else statement to get team by name or ID
-  ifelse(is.na(id_num) & is.na(franchise_name), franchise_records <- df1, 
-         ifelse(is.na(id_num) & is.na(franchise_name) == FALSE, franchise_records <- filter(df1, franchiseName == franchise_name),
-                ifelse(is.na(id_num) == FALSE & is.na(franchise_name), franchise_records <- filter(df1, franchiseId == id_num), 
-                       franchise_records <- filter(df1, franchiseId == id_num | franchiseName == franchise_name)                                                         ))                                                         )
+  ifelse(is.na(team_id) & is.na(team_name), franchise_records <- df1, 
+         ifelse(is.na(team_id) & is.na(team_name) == FALSE, franchise_records <- filter(df1, franchiseName == team_name),
+                ifelse(is.na(team_id) == FALSE & is.na(team_name), franchise_records <- filter(df1, franchiseId == team_id), 
+                       franchise_records <- filter(df1, franchiseId == team_id | franchiseName == team_name)                                                         ))                                                         )
   return(franchise_records)
 }
 
-get_franchise_records(record_type = 'skater', id_num = 2)
+get_franchise_records(record_type = 'skater', team_id = 2)
 ```
 
 ```{r franchise detail function}
-get_franchise_detail <- function(id_num = NA){
-  #connect to API
-  get_endpoint <- GET('https://records.nhl.com/site/api/franchise-detail') %>%
+get_franchise_detail <- function(team_id = NA){
+  
+  #connect to API drilling down if needed
+  URL1 <- paste0('https://records.nhl.com/site/api/franchise-detail')
+  URL2 <- paste0('https://records.nhl.com/site/api/franchise-detail?cayenneExp=mostRecentTeamId=', as.character(team_id))
+  
+  ifelse(is.na(team_id), URL <- URL1, URL <- URL2)
+
+  endpoint <- GET(URL) %>%
     content("text", encoding = 'UTF-8') %>%
     fromJSON(flatten = T) 
-   df1 <- get_endpoint$data
   
-  #if else statement to get team by name or ID
-  ifelse(is.na(id_num), franchise_detail <- df1, franchise_detail <- filter(df1, id == id_num))                                                                                                        
-  return(franchise_detail)
+  return(endpoint$data)
 }
 
-get_franchise_detail(4)
+get_franchise_detail()
 ```
 
 ```{r get stats}
-get_team_stats <- function(id = 'All'){
+get_team_stats <- function(team_id = 'All', team_name = NA){
 
-if (id == 'All'){
+if (team_id == 'All'){
 #teams info to show where individual team info is located
 get_endpoint_all <- GET('https://statsapi.web.nhl.com/api/v1/teams/') %>%
     content("text", encoding = 'UTF-8') %>%
@@ -115,7 +118,7 @@ team_stats_combined_games <- {}
 team_stats_combined_wins <- {}
 
 #use URL pulled from get_endpoint_all to grab data from all teams and then combine
-URL_combine <- paste0('https://statsapi.web.nhl.com/api/v1/teams/', as.character(get_endpoint_all$teams$id), '/stats', '?expand=team.stats')
+URL_combine <- paste0('https://statsapi.web.nhl.com/api/v1/teams/', as.character(get_endpoint_all$teams$id), '/stats')
   for (i in 1:length(URL_combine)){
     team_stat <- GET(URL_combine[i]) %>%
       content("text", encoding = 'UTF-8') %>%
@@ -126,11 +129,13 @@ URL_combine <- paste0('https://statsapi.web.nhl.com/api/v1/teams/', as.character
 team_stats_combined_games <- select(team_stats_combined_games, team.id, team.name, everything())
 team_stats_combined_wins <- select(team_stats_combined_wins, team.id, team.name, everything())
 
-return(full_join(team_stats_combined_games, team_stats_combined_wins, by = 'team.id'))
+final <- full_join(team_stats_combined_games, team_stats_combined_wins, by = 'team.id')
+if (is.na(team_name)) return(final)
+  else return(filter(final, team.name.x == team_name))
 
 } else {
 #if specific team wanted
-  URL <- paste0('https://statsapi.web.nhl.com/api/v1/teams/', as.character(id), '/stats', '?expand=team.stats')
+  URL <- paste0('https://statsapi.web.nhl.com/api/v1/teams/', as.character(team_id), '/stats')
   get_endpoint <- GET(URL) %>%
       content("text", encoding = 'UTF-8') %>%
       fromJSON(flatten = T) 
@@ -138,12 +143,27 @@ return(full_join(team_stats_combined_games, team_stats_combined_wins, by = 'team
     select(team.id, team.name, everything())
   wins <- get_endpoint$stats$splits[[2]] %>% 
     select(team.id, team.name, everything())
-  return(full_join(games, wins, by = 'team.id'))
+  
+  final <- full_join(games, wins, by = 'team.id')
+  return(final)
 }
 }
 
 #get_team_stats()
-get_team_stats(2)
+get_team_stats(team_name = 'New York Islanders')
+```
+
+All functions have team_id and team_name as arguments to obtain desired record. 
+```{r wrapper}
+get_endpoint <- function(endpoint = c('franchise', 'team totals', 'records', 'details', 'stats'), ...){
+  ifelse(endpoint == 'franchise', return(get_franchise(...)),
+      ifelse(endpoint == 'team totals', return(get_franchise_team_totals(...)),
+           ifelse(endpoint == 'records', return(get_franchise_records(...)),
+                  ifelse(endpoint == 'details', return(get_franchise_detail(...)),
+                         ifelse(endpoint == 'stats', return(get_team_stats(...)))))))
+}
+
+get_endpoint()
 ```
 
 
