@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(httr)
 library(jsonlite)
 library(tidyverse)
+library(lubridate)
 ```
 
 ## Functions to access API's
@@ -101,6 +102,7 @@ get_franchise_detail <- function(team_id = NA){
 }
 
 get_franchise_detail()
+?lubridate
 ```
 
 ```{r get stats}
@@ -112,26 +114,24 @@ get_endpoint_all <- GET('https://statsapi.web.nhl.com/api/v1/teams/') %>%
     content("text", encoding = 'UTF-8') %>%
     fromJSON(flatten = T) 
 
-
-#get all team info
-team_stats_combined_games <- {}
-team_stats_combined_wins <- {}
-
 #use URL pulled from get_endpoint_all to grab data from all teams and then combine
 URL_combine <- paste0('https://statsapi.web.nhl.com/api/v1/teams/', as.character(get_endpoint_all$teams$id), '/stats')
+#get all team info
+team_stats_combined_single_season <- team_stats_combined_rankings <- vector("list", length(URL_combine))
+
   for (i in 1:length(URL_combine)){
     team_stat <- GET(URL_combine[i]) %>%
       content("text", encoding = 'UTF-8') %>%
       fromJSON(flatten = T) 
-   team_stats_combined_games <- rbind(team_stats_combined_games, team_stat$stats$splits[[1]])
-   team_stats_combined_wins <- rbind(team_stats_combined_wins, team_stat$stats$splits[[2]])
+   team_stats_combined_single_season[[i]] <- team_stat$stats$splits[[1]]
+   team_stats_combined_rankings[[i]] <- team_stat$stats$splits[[2]]
   }
-team_stats_combined_games <- select(team_stats_combined_games, team.id, team.name, everything())
-team_stats_combined_wins <- select(team_stats_combined_wins, team.id, team.name, everything())
+team_stats_combined_single_season <- bind_rows(team_stats_combined_single_season)
+team_stats_combined_rankings <- bind_rows(team_stats_combined_rankings)
 
-final <- full_join(team_stats_combined_games, team_stats_combined_wins, by = 'team.id')
+final <- list(single_season = team_stats_combined_single_season, rankings = team_stats_combined_rankings)
 if (is.na(team_name)) return(final)
-  else return(filter(final, team.name.x == team_name))
+  else return(list(single_season = filter(team_stats_combined_single_season, team.name == team_name), rankings = filter(team_stats_combined_rankings, team.name == team_name)))
 
 } else {
 #if specific team wanted
@@ -139,17 +139,18 @@ if (is.na(team_name)) return(final)
   get_endpoint <- GET(URL) %>%
       content("text", encoding = 'UTF-8') %>%
       fromJSON(flatten = T) 
-  games <- get_endpoint$stats$splits[[1]] %>% 
+  single_season <- get_endpoint$stats$splits[[1]] %>% 
     select(team.id, team.name, everything())
-  wins <- get_endpoint$stats$splits[[2]] %>% 
+  rankings <- get_endpoint$stats$splits[[2]] %>% 
     select(team.id, team.name, everything())
   
-  final <- full_join(games, wins, by = 'team.id')
+  final <- list(single_season = single_season, rankings = rankings)
   return(final)
 }
 }
 
-#get_team_stats()
+get_team_stats()
+get_team_stats(team_id = 1)
 get_team_stats(team_name = 'New York Islanders')
 ```
 
@@ -163,7 +164,62 @@ get_endpoint <- function(endpoint = c('franchise', 'team totals', 'records', 'de
                          ifelse(endpoint == 'stats', return(get_team_stats(...)))))))
 }
 
-get_endpoint()
+get_endpoint('team totals')
 ```
 
+
+# Exploratory Data Analysis
+Now I can easily pull data from several of the API endpoints. I will now perform an Exploratory Data Analysis. 
+
+## Bar Plot exploring Team Wins
+```{r}
+team_totals <- get_endpoint('team totals')
+
+team_wins <- team_totals %>%
+  group_by(teamName) %>%
+  summarize_at(c('wins', 'homeWins', 'roadWins'), sum, na.rm = T) %>% #add up rows by team
+  arrange(desc(wins)) %>% #sort by number of wins
+  head(25) %>% #only keep top 25
+  ggplot(aes(reorder(teamName, wins)))
+team_wins + geom_col(aes(y = wins, fill = 'darkred')) + #fill show go in aes layer so legend shows up 
+  geom_col(aes(y = homeWins, fill = 'darkblue')) + #add layer to show proportion of wins that are home
+  coord_flip() + 
+  theme_minimal() +
+  theme(legend.position = c(0.9,0.2)) +
+  labs(x = 'Team Name', y = 'Total Wins', title = 'The 25 Teams with Greatest Number of Wins') +
+  scale_fill_manual(name = 'Win Type', labels = c('Home', 'Away'), values = c('darkblue','darkred'))
+
+```
+# Scatter Plot with Text Labels
+```{r}
+season_records <- get_endpoint('records', record_type = 'season') %>%
+  rename(team.id = id)
+stats <- get_endpoint('stats')[[1]] #extract first element of this list
+
+#combine records and stats
+records_stats <- left_join(season_records, stats, by = 'team.id') %>%
+  select(team.id, franchiseName, everything(), -team.name)
+#str(records_stats)
+
+#create scatter plot
+ggplot(records_stats, aes(fewestGoals, stat.powerPlayPercentage)) +
+  geom_text(aes(label = team.id), na.rm = T) +
+  labs(x = 'Fewest Goals', y = 'Power Play Percentage', title = 'Record for Fewest Goals by Power Play Percentage for Each Team ID') +
+  theme_minimal()
+
+```
+
+## Box plot for Number of Road Loss Streaks by Starting Month
+```{r}
+season_records %>% 
+  select(starts_with('roadLoss')) %>% #select relevant data
+  separate(roadLossStreakDates, into = 'start_month', sep = 3) %>% #separate column so I just have start month
+  filter(is.na(start_month) == F) %>%
+  mutate(month_numeric = ifelse(start_month == 'Jan', 13, 
+                                ifelse(start_month == 'Feb', 14, match(start_month, month.abb)))) %>% #put Jan and Feb on the end so we are looking at the correct ordering of one season
+  ggplot(aes(reorder(start_month, month_numeric), roadLossStreak)) +
+    geom_boxplot() +
+  labs(x = 'Start Month', y = 'Road Loss Streak', title = 'Road Loss Streaks by Start Month')
+
+```
 
