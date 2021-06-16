@@ -1,9 +1,9 @@
 ---
-title: "Vignette"
+title: "Project 1 - Accessing API's Vignette"
 author: "Crista Gregg"
 date: "6/10/2021"
 output: 
-  html_document:
+  github_document:
     toc: true
 ---
 
@@ -11,6 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# List of Required Packages
 ```{r message=FALSE, warning=FALSE}
 library(httr)
 library(jsonlite)
@@ -19,7 +20,9 @@ library(lubridate)
 library(knitr)
 ```
 
-## Functions to access API's
+# Functions to access API's
+## Franchise Function  
+
 ```{r franchise function}
 get_franchise <- function(team_id = NA, team_name = NA){
   #connect to API
@@ -39,8 +42,8 @@ get_franchise <- function(team_id = NA, team_name = NA){
 get_franchise(3, team_name = 'Montreal Wanderers')
 ```
 
+## Franchise team totals Function
 ```{r franchise team totals function}
-
 get_franchise_team_totals <- function(team_id = NA, team_name = NA){
   #connect to API
   get_endpoint <- GET('https://records.nhl.com/site/api/franchise-team-totals') %>%
@@ -58,7 +61,7 @@ get_franchise_team_totals <- function(team_id = NA, team_name = NA){
 
 get_franchise_team_totals(2)
 ```
-
+## Records Function
 ```{r records function}
 #function to call from franchise season records, goalie records, or skater records.
 get_franchise_records <- function(record_type , team_id = NA, team_name = NA){
@@ -83,9 +86,10 @@ get_franchise_records <- function(record_type , team_id = NA, team_name = NA){
   return(franchise_records)
 }
 
-get_franchise_records(record_type = 'skater', team_id = 2)
+get_franchise_records(record_type = 'skater', team_id = 2)[1:6]
 ```
 
+## Franchise Details Function
 ```{r franchise detail function}
 get_franchise_detail <- function(team_id = NA){
   
@@ -102,10 +106,10 @@ get_franchise_detail <- function(team_id = NA){
   return(endpoint$data)
 }
 
-get_franchise_detail()
-?lubridate
+get_franchise_detail(10)
 ```
 
+## Franchise Stats and Rankings Function
 ```{r get stats}
 get_team_stats <- function(team_id = 'All', team_name = NA){
 
@@ -150,11 +154,12 @@ if (is.na(team_name)) return(final)
 }
 }
 
-get_team_stats()
-get_team_stats(team_id = 1)
+#get_team_stats()
+#get_team_stats(team_id = 1)
 get_team_stats(team_name = 'New York Islanders')
 ```
 
+## Wrapper Function
 All functions have team_id and team_name as arguments to obtain desired record. 
 ```{r wrapper}
 get_endpoint <- function(endpoint = c('franchise', 'team totals', 'records', 'details', 'stats'), ...){
@@ -165,7 +170,7 @@ get_endpoint <- function(endpoint = c('franchise', 'team totals', 'records', 'de
                          ifelse(endpoint == 'stats', return(get_team_stats(...)))))))
 }
 
-get_endpoint('team totals')
+get_endpoint('team totals', team_id = 7)
 ```
 
 
@@ -177,7 +182,7 @@ Now I can easily pull data from several of the API endpoints. I will now perform
 ```{r}
 details <- get_endpoint('details')
 t <- table(details$active)
-kable(t, col.names = c('Active', 'Count'), caption = 'Count of Active Teams')
+kable(t, col.names = c('Team Active?', 'Count'), caption = 'Count of Active Teams')
 ```
 ### Two-way contingency Table
 ```{r}
@@ -189,15 +194,18 @@ kable(t2, caption = 'Activity of Teams by First Active Year')
 ## Visuals
 ### Line Chart Visualizing Contigency Table from Above
 ```{r}
-t3 <- data.frame(t2) %>%
+t3 <- data.frame(t2) %>% #make freguency table a data frame
   rename(Year = Var1, Active = Var2)
-t3
+
 ggplot(t3, aes(x = Year, y = Freq)) +
   geom_line(aes(group = Active, color = Active), size = 2) +
-  labs(y = 'Count of Teams', title = 'Count of Active and Inactive Teams by Year') +
-  scale_color_discrete(name = NULL, labels = c('Inactive', 'Active'))
+  labs(y = 'Count of Teams', title = 'Count of Active and Inactive Teams by YFirst Active Year') +
+  scale_color_discrete(name = NULL, labels = c('Inactive', 'Active')) +
+  theme(axis.text.x = element_text(angle = -40))
 ```
-
+  
+Above we see the number of currently active and inactive teams by the year they were first active. We see all teams in this list that are inactive were first active before 1970. We have the most teams that were first active in 1967.  
+  
 ### Bar Plot exploring Team Wins
 ```{r}
 team_totals <- get_endpoint('team totals')
@@ -217,7 +225,10 @@ team_wins + geom_col(aes(y = wins, fill = 'darkred')) + #fill show go in aes lay
   scale_fill_manual(name = 'Win Type', labels = c('Home', 'Away'), values = c('darkblue','darkred'))
 
 ```
-# Scatter Plot with Text Labels
+  
+Here we have a bar plot of the total wins by team broken into home wins and away wins. Only the top 25 teams are shown. The Montreal Canadiens have the most total wins at nearly 4,000.  
+  
+### Scatter Plot of Fewest Goals by Power Play Percentage with Text Labels for each Team ID
 ```{r}
 season_records <- get_endpoint('records', record_type = 'season') %>%
   rename(team.id = id)
@@ -235,8 +246,10 @@ ggplot(records_stats, aes(fewestGoals, stat.powerPlayPercentage)) +
   theme_minimal()
 
 ```
-
-## Box plot for Number of Road Loss Streaks by Starting Month
+  
+The graph above shows the power play percentage by fewest goals in a season for each team. The points are labeled with the team ID for reference. We do not see much of a relationship, but we do notice team 54 has the largest number by far for fewest goals in a season.  
+  
+### Box plot for Number of Road Loss Streaks by Starting Month
 ```{r}
 season_records %>% 
   select(starts_with('roadLoss')) %>% #select relevant data
@@ -250,7 +263,9 @@ season_records %>%
 
 ```
 
-## Histogram of the Distribution of the Proportion of losses per game for Goalies
+Above we have a box plot for the road loss streaks by start month ordered by the season months from October to February. October and December both have two outliers.  
+  
+### Histogram of the Distribution of the Proportion of losses per game for Goalies
 ```{r}
 get_endpoint('records', record_type = 'goalie') %>%
   filter(gamesPlayed > 10) %>% #to cut down on those who played a just a few games and thus had extreme proportions
@@ -261,6 +276,9 @@ get_endpoint('records', record_type = 'goalie') %>%
     labs(x = 'Proportion of Games Lost', y = 'Density', title = 'Distribution of the Proportion of Games Lost for Goalies who Played >10 Games')
 ```
 
+Above is the distribution of the proportion of games lost by individual goalies. Those who played less than 10 games were removed to avoid extreme proportions. A density curve is overlayed on the histogram. The mean proportion appears to be around 0.3, and the data is more or less normally distributed, though it has a slight skew to the right.  
+  
+### Scatter plot showing median penalty minutes by median rookie games
 ```{r}
 skater <- get_endpoint('records', record_type = 'skater')
 skater %>%
@@ -272,3 +290,4 @@ skater %>%
     labs(x = 'Median Rookie Games', y = 'Median Penalty Minutes', title = 'Median Rookie Games by Median Penalty Minutes for each Team')
 ```
 
+Finally, we have a scatter plot showing the median rookie games by the median penalty minutes for skaters, grouped by team. We see a slight positive trend here, as seen by the linear regression line. 
