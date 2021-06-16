@@ -16,6 +16,7 @@ library(httr)
 library(jsonlite)
 library(tidyverse)
 library(lubridate)
+library(knitr)
 ```
 
 ## Functions to access API's
@@ -171,7 +172,33 @@ get_endpoint('team totals')
 # Exploratory Data Analysis
 Now I can easily pull data from several of the API endpoints. I will now perform an Exploratory Data Analysis. 
 
-## Bar Plot exploring Team Wins
+## Contingency Tables 
+### One-way Contingency Table
+```{r}
+details <- get_endpoint('details')
+t <- table(details$active)
+kable(t, col.names = c('Active', 'Count'), caption = 'Count of Active Teams')
+```
+### Two-way contingency Table
+```{r}
+activity_year <- details %>%
+  separate(firstSeasonId, into = 'first_year', sep = 4) #keep first year for readability
+t2 <- table(activity_year$first_year, activity_year$active)
+kable(t2, caption = 'Activity of Teams by First Active Year')
+```
+## Visuals
+### Line Chart Visualizing Contigency Table from Above
+```{r}
+t3 <- data.frame(t2) %>%
+  rename(Year = Var1, Active = Var2)
+t3
+ggplot(t3, aes(x = Year, y = Freq)) +
+  geom_line(aes(group = Active, color = Active), size = 2) +
+  labs(y = 'Count of Teams', title = 'Count of Active and Inactive Teams by Year') +
+  scale_color_discrete(name = NULL, labels = c('Inactive', 'Active'))
+```
+
+### Bar Plot exploring Team Wins
 ```{r}
 team_totals <- get_endpoint('team totals')
 
@@ -221,5 +248,27 @@ season_records %>%
     geom_boxplot() +
   labs(x = 'Start Month', y = 'Road Loss Streak', title = 'Road Loss Streaks by Start Month')
 
+```
+
+## Histogram of the Distribution of the Proportion of losses per game for Goalies
+```{r}
+get_endpoint('records', record_type = 'goalie') %>%
+  filter(gamesPlayed > 10) %>% #to cut down on those who played a just a few games and thus had extreme proportions
+  transmute(losses_per_game = losses/gamesPlayed) %>% #create and keep only the new variable
+  ggplot(aes(losses_per_game)) +
+    geom_histogram(aes(y = ..density..), bins = 25, fill = 'darkblue') +
+    geom_density(size = 2) +
+    labs(x = 'Proportion of Games Lost', y = 'Density', title = 'Distribution of the Proportion of Games Lost for Goalies who Played >10 Games')
+```
+
+```{r}
+skater <- get_endpoint('records', record_type = 'skater')
+skater %>%
+  group_by(franchiseName) %>%
+  summarise(median_penalty_minutes = median(penaltyMinutes, na.rm = T), median_rookie_games = median(rookieGamesPlayed, na.rm = T)) %>%
+  ggplot(aes(median_rookie_games, median_penalty_minutes)) +
+    geom_point(size = 2) +
+    geom_smooth(method = lm) +
+    labs(x = 'Median Rookie Games', y = 'Median Penalty Minutes', title = 'Median Rookie Games by Median Penalty Minutes for each Team')
 ```
 
