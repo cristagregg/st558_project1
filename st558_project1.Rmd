@@ -1,5 +1,5 @@
 ---
-title: "Project 1 - Accessing API's Vignette"
+title: "Project 1 - Accessing API's"
 author: "Crista Gregg"
 date: "6/10/2021"
 output: 
@@ -216,7 +216,7 @@ team_wins <- team_totals %>%
   arrange(desc(wins)) %>% #sort by number of wins
   head(25) %>% #only keep top 25
   ggplot(aes(reorder(teamName, wins)))
-team_wins + geom_col(aes(y = wins, fill = 'darkred')) + #fill show go in aes layer so legend shows up 
+team_wins + geom_col(aes(y = wins, fill = 'darkred')) + #fill should go in aes layer so legend shows up 
   geom_col(aes(y = homeWins, fill = 'darkblue')) + #add layer to show proportion of wins that are home
   coord_flip() + 
   theme_minimal() +
@@ -240,11 +240,12 @@ records_stats <- left_join(season_records, stats, by = 'team.id') %>%
 #str(records_stats)
 
 #create scatter plot
-ggplot(records_stats, aes(fewestGoals, stat.powerPlayPercentage)) +
+records_stats %>%
+  filter(is.na(stat.powerPlayPercentage) == F) %>% #removed the NA value.
+ggplot(aes(fewestGoals, as.numeric(stat.powerPlayPercentage))) +
   geom_text(aes(label = team.id), na.rm = T) +
   labs(x = 'Fewest Goals', y = 'Power Play Percentage', title = 'Record for Fewest Goals by Power Play Percentage for Each Team ID') +
   theme_minimal()
-
 ```
   
 The graph above shows the power play percentage by fewest goals in a season for each team. The points are labeled with the team ID for reference. We do not see much of a relationship, but we do notice team 54 has the largest number by far for fewest goals in a season.  

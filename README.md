@@ -1,4 +1,4 @@
-Project 1 - Accessing API’s Vignette
+Project 1 - Accessing API’s
 ================
 Crista Gregg
 6/10/2021
@@ -97,16 +97,16 @@ get_franchise_team_totals(2)
 
     ##   id activeFranchise firstSeasonId franchiseId gameTypeId gamesPlayed goalsAgainst goalsFor
     ## 1  3               1      19721973          22          2        3788        11907    12045
-    ## 2  4               1      19721973          22          3         308          895      982
+    ## 2  4               1      19721973          22          3         310          899      986
     ##   homeLosses homeOvertimeLosses homeTies homeWins lastSeasonId losses overtimeLosses
     ## 1        678                 84      170      963           NA   1587            166
-    ## 2         52                  1       NA       94           NA    138              0
+    ## 2         53                  1       NA       95           NA    139              0
     ##   penaltyMinutes pointPctg points roadLosses roadOvertimeLosses roadTies roadWins shootoutLosses
     ## 1          57792    0.5133   3889        909                 82      177      725             70
-    ## 2           5687    0.0130      8         86                  2       NA       76              0
+    ## 2           5693    0.0129      8         86                  2       NA       76              0
     ##   shootoutWins shutouts teamId           teamName ties triCode wins
     ## 1           86      177      2 New York Islanders  347     NYI 1688
-    ## 2            0       12      2 New York Islanders   NA     NYI  170
+    ## 2            0       12      2 New York Islanders   NA     NYI  171
 
 ## Records Function
 
@@ -372,7 +372,7 @@ ggplot(t3, aes(x = Year, y = Freq)) +
   theme(axis.text.x = element_text(angle = -40))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-432-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 Above we see the number of currently active and inactive teams by the
 year they were first active. We see all teams in this list that are
@@ -390,7 +390,7 @@ team_wins <- team_totals %>%
   arrange(desc(wins)) %>% #sort by number of wins
   head(25) %>% #only keep top 25
   ggplot(aes(reorder(teamName, wins)))
-team_wins + geom_col(aes(y = wins, fill = 'darkred')) + #fill show go in aes layer so legend shows up 
+team_wins + geom_col(aes(y = wins, fill = 'darkred')) + #fill should go in aes layer so legend shows up 
   geom_col(aes(y = homeWins, fill = 'darkblue')) + #add layer to show proportion of wins that are home
   coord_flip() + 
   theme_minimal() +
@@ -399,7 +399,7 @@ team_wins + geom_col(aes(y = wins, fill = 'darkred')) + #fill show go in aes lay
   scale_fill_manual(name = 'Win Type', labels = c('Home', 'Away'), values = c('darkblue','darkred'))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-433-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 Here we have a bar plot of the total wins by team broken into home wins
 and away wins. Only the top 25 teams are shown. The Montreal Canadiens
@@ -418,13 +418,15 @@ records_stats <- left_join(season_records, stats, by = 'team.id') %>%
 #str(records_stats)
 
 #create scatter plot
-ggplot(records_stats, aes(fewestGoals, stat.powerPlayPercentage)) +
+records_stats %>%
+  filter(is.na(stat.powerPlayPercentage) == F) %>% #removed the NA value.
+ggplot(aes(fewestGoals, as.numeric(stat.powerPlayPercentage))) +
   geom_text(aes(label = team.id), na.rm = T) +
   labs(x = 'Fewest Goals', y = 'Power Play Percentage', title = 'Record for Fewest Goals by Power Play Percentage for Each Team ID') +
   theme_minimal()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-434-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 The graph above shows the power play percentage by fewest goals in a
 season for each team. The points are labeled with the team ID for
@@ -445,7 +447,7 @@ season_records %>%
   labs(x = 'Start Month', y = 'Road Loss Streak', title = 'Road Loss Streaks by Start Month')
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-435-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
 Above we have a box plot for the road loss streaks by start month
 ordered by the season months from October to February. October and
@@ -463,7 +465,7 @@ get_endpoint('records', record_type = 'goalie') %>%
     labs(x = 'Proportion of Games Lost', y = 'Density', title = 'Distribution of the Proportion of Games Lost for Goalies who Played >10 Games')
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-436-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
 Above is the distribution of the proportion of games lost by individual
 goalies. Those who played less than 10 games were removed to avoid
@@ -486,7 +488,7 @@ skater %>%
 
     ## `geom_smooth()` using formula 'y ~ x'
 
-![](README_files/figure-gfm/unnamed-chunk-437-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 Finally, we have a scatter plot showing the median rookie games by the
 median penalty minutes for skaters, grouped by team. We see a slight
